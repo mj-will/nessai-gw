@@ -1,0 +1,88 @@
+[build-system]
+requires = ["setuptools>=45", "setuptools-scm[toml]>=6.2", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nessai-gw"
+authors = [
+    {name = "Michael J. Williams", email = "michaeljw1@googlemail.com"},
+]
+description = "Gravitational-wave reparameterisations and proposals for nessai"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+keywords = [
+    "nested sampling",
+    "normalizing flows",
+    "machine learning",
+]
+dependencies = [
+    "nessai",
+    "numpy",
+    "scipy",
+]
+dynamic = [
+    "version",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/mj-will/nessai-gw"
+
+
+[project.optional-dependencies]
+test = [
+    "pytest",
+    "pytest-cov",
+    "pytest-timeout",
+    "pytest-rerunfailures",
+    "pytest-integration",
+    "pytest-requires",
+]
+bilby = [
+    "bilby",
+    "nessai-bilby",
+    "lalsuite",
+    "astropy",
+]
+
+[tool.setuptools_scm]
+
+[project.entry-points."nessai.proposals"]
+gwflowproposal = "nessai_gw.proposals:GWFlowProposal"
+augmentedgwflowproposal = "nessai_gw.proposals:AugmentedGWFlowProposal"
+clusteringgwflowproposal = "nessai_gw.proposals:ClusteringGWFlowProposal"
+
+[tool.pytest.ini_options]
+addopts = [
+    "-ra",
+    "--cov=nessai-gw",
+    "--import-mode=importlib",
+]
+testpaths = [
+    "tests"
+]
+
+[tool.coverage.run]
+source = [
+    "nessai"
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+]
+
+[tool.black]
+line-length = 79
+target-version = [
+    "py39",
+    "py310",
+    "py311",
+    "py312",
+]
