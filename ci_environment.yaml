@@ -1,0 +1,18 @@
+name: nessai-gw-ci
+channels:
+  - pytorch
+  - conda-forge
+  - default
+dependencies:
+  - nessai
+  - nessai-bilby
+  - bilby
+  - astropy
+  - pytorch
+  - cpuonly
+  - pytest
+  - pytest-cov
+  - pytest-timeout
+  - pytest-rerunfailures
+  - pytest-integration
+  - pytest-requires

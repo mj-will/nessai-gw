@@ -1,0 +1,21 @@
+name: Tests
+
+on:
+  push:
+    branches: [ main, release* ]
+  pull_request:
+    branches: [ main, release* ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit-tests:
+    name: Run unit tests
+    uses: ./.github/workflows/build-env.yml
+    steps:
+      - name: Run unit tests
+        run: |
+          python -m pytest -v --without-integration --without-slow-integration
+        shell: bash -el {0}
