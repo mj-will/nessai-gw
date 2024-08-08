@@ -4,11 +4,8 @@ from nessai.reparameterisations import (
     default_reparameterisations as base_reparameterisations,
 )
 
-from .reparameterisations import (
-    DistanceReparameterisation,
-    DeltaPhaseReparameterisation,
-    LISAExtrinsicSymmetry,
-)
+from .distance import DistanceReparameterisation
+from .phase import DeltaPhaseReparameterisation
 
 known_reparameterisations = {
     "distance": (
@@ -34,10 +31,6 @@ known_reparameterisations = {
     "mass": (RescaleToBounds, {"update_bounds": True}),
     "delta_phase": (DeltaPhaseReparameterisation, {}),
     "delta-phase": (DeltaPhaseReparameterisation, {}),
-    "lisa-sky": (LISAExtrinsicSymmetry, {}),
-    "lisa_sky": (LISAExtrinsicSymmetry, {}),
-    "lisa-extrinsic": (LISAExtrinsicSymmetry, {}),
-    "lisa_extrinsic": (LISAExtrinsicSymmetry, {}),
 }
 
 known_reparameterisations.update(base_reparameterisations)
