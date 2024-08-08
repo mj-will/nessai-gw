@@ -1,5 +1,5 @@
 from nessai_gw.reparameterisations import known_reparameterisations
-from nessai_gw.reparameterisations.reparameterisations import (
+from nessai_gw.reparameterisations.distance import (
     DistanceReparameterisation,
 )
 from nessai_gw.reparameterisations.utils import (
@@ -28,6 +28,6 @@ def test_get_gw_reparameterisation():
 
 @pytest.mark.integration_test
 def test_get_gw_reparameterisation_integration():
-    """Integration test for get_gw_reparameterisation"""
+    """Integration test for get_reparameterisation"""
     reparam, _ = get_reparameterisation("distance")
     assert reparam is DistanceReparameterisation
