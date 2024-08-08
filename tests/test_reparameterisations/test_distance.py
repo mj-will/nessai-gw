@@ -1,4 +1,3 @@
-
 import pytest
 from nessai_gw.reparameterisations import (
     DistanceReparameterisation,

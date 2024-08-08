@@ -103,4 +103,3 @@ class DistanceReparameterisation(RescaleToBounds):
         self.detect_edges_kwargs["x_range"] = self.prior_bounds[
             self.parameters[0]
         ]
-
