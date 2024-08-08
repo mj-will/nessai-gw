@@ -9,8 +9,10 @@ Once installed, these proposals can be used in `nessai` by specifying the
 
 ### Example
 
+```python
 fs = FlowSampler(
     model,
     ...,
     flow_proposal_class="gwflowproposal",
 )
+```
