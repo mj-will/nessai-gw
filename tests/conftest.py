@@ -25,14 +25,10 @@ def injection_parameters():
 
 
 @pytest.fixture()
-def get_bilby_gw_model() -> Callable:
-    """Return a function will provide a nessai model given parameters
-    and an injection.
-    """
-    import bilby
-    from nessai_bilby.model import BilbyModel
+def get_bilby_priors_and_likelihood():
 
-    def get_model(parameters, injection_parameters) -> BilbyModel:
+    def get_priors_and_likelihood(parameters, injection_parameters):
+        import bilby
 
         priors = bilby.gw.prior.BBHPriorDict()
         fixed_params = [
@@ -69,7 +65,7 @@ def get_bilby_gw_model() -> Callable:
                 priors[key] = injection_parameters[key]
 
         waveform_generator = bilby.gw.WaveformGenerator(
-            duration=1,
+            duration=4,
             sampling_frequency=256,
             frequency_domain_source_model=bilby.gw.source.lal_binary_black_hole,  # noqa
         )
@@ -86,6 +82,22 @@ def get_bilby_gw_model() -> Callable:
 
         likelihood = bilby.core.likelihood.ZeroLikelihood(likelihood)
 
+        return priors, likelihood
+
+    return get_priors_and_likelihood
+
+
+@pytest.fixture()
+def get_bilby_gw_model(get_bilby_priors_and_likelihood) -> Callable:
+    """Return a function will provide a nessai model given parameters
+    and an injection.
+    """
+    from nessai_bilby.model import BilbyModel
+
+    def get_model(parameters, injection_parameters) -> BilbyModel:
+        priors, likelihood = get_bilby_priors_and_likelihood(
+            parameters, injection_parameters
+        )
         return BilbyModel(priors=priors, likelihood=likelihood)
 
     return get_model
