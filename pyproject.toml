@@ -22,7 +22,7 @@ keywords = [
     "machine learning",
 ]
 dependencies = [
-    "nessai",
+    "nessai>=0.13.1",
     "numpy",
     "scipy",
 ]
@@ -69,7 +69,7 @@ testpaths = [
 
 [tool.coverage.run]
 source = [
-    "nessai"
+    "src/nessai-gw"
 ]
 
 [tool.coverage.report]
