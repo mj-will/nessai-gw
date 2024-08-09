@@ -4,7 +4,7 @@ channels:
   - conda-forge
   - default
 dependencies:
-  - nessai
+  - nessai>=0.13.1
   - nessai-bilby
   - bilby
   - astropy
