@@ -16,3 +16,6 @@ dependencies:
   - pytest-rerunfailures
   - pytest-integration
   - pytest-requires
+  - pip
+  - pip:
+    - "git+https://github.com/mj-will/nessai.git@support-entry-points"
