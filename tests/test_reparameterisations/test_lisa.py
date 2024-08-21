@@ -21,7 +21,7 @@ def extrinsic_prior_bounds():
         "eclipticlongitude": [0, 2 * np.pi],
         "eclipticlatitude": [-np.pi / 2, np.pi / 2],
         "polarization": [0, np.pi],
-        "iota": [0, np.pi]
+        "iota": [0, np.pi],
     }
 
 
@@ -44,7 +44,9 @@ def test_extrinsic_reparam_invertible(
 
     x, x_prime, log_j = reparam.reparameterise(x, x_prime, log_j)
 
-    x_re, _, log_j_re = reparam.inverse_reparameterise(x.copy(), x_prime.copy(), log_j.copy())
+    x_re, _, log_j_re = reparam.inverse_reparameterise(
+        x.copy(), x_prime.copy(), log_j.copy()
+    )
 
     assert_structured_arrays_equal(x_re, x, atol=1e-14)
     np.testing.assert_equal(log_j_re, 0.0)
