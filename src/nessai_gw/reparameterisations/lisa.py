@@ -223,7 +223,8 @@ class LISAExtrinsicSymmetry(Reparameterisation):
         lat_num = mode_index // 4
 
         x[self.lambda_parameter] = np.mod(
-            x_prime[self.lambda_parameter_prime] + long_num * 0.5 * np.pi, 2 * np.pi
+            x_prime[self.lambda_parameter_prime] + long_num * 0.5 * np.pi,
+            2 * np.pi,
         )
         x[self.beta_parameter] = np.where(
             lat_num,

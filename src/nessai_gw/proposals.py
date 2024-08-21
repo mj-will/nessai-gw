@@ -123,4 +123,5 @@ class LISAFlowProposal(GWFlowProposal):
     Does not has the same default reparameterisations as :code:`GWFlowProposal`
     but supports all GW reparameterisations.
     """
+
     aliases = None
