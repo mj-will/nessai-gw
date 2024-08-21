@@ -18,4 +18,4 @@ dependencies:
   - pytest-requires
   - pip
   - pip:
-    - "git+https://github.com/mj-will/nessai.git@support-entry-points"
+    - "git+https://github.com/mj-will/nessai.git@main"
