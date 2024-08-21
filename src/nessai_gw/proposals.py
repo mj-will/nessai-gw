@@ -108,7 +108,7 @@ class AugmentedGWFlowProposal(AugmentedFlowProposal, GWFlowProposal):
 
 
 class ClusteringGWFlowProposal(ClusteringFlowProposal, GWFlowProposal):
-    """Augmented version of GWFlowProposal.
+    """Clustering version of GWFlowProposal.
 
     See :obj:`~nessai.proposal.augmented.ClusteringFlowProposal` and
     :obj:`~nessai.gw.proposal.GWFlowPropsosal`
@@ -118,5 +118,9 @@ class ClusteringGWFlowProposal(ClusteringFlowProposal, GWFlowProposal):
 
 
 class LISAFlowProposal(GWFlowProposal):
+    """Proposal for LISA analyses.
 
+    Does not has the same default reparameterisations as :code:`GWFlowProposal`
+    but supports all GW reparameterisations.
+    """
     aliases = None
