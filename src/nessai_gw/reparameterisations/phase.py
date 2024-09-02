@@ -1,11 +1,12 @@
-import logging
 from nessai.reparameterisations import (
     Reparameterisation,
 )
 import numpy as np
 
+from .. import nessai_logger
 
-logger = logging.getLogger(__name__)
+
+logger = nessai_logger.getChild(__name__)
 
 
 class DeltaPhaseReparameterisation(Reparameterisation):

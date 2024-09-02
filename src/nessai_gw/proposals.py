@@ -2,16 +2,16 @@
 """
 Specific proposal methods for sampling gravitational-wave models.
 """
-import logging
 from nessai.proposal import (
     AugmentedFlowProposal,
     FlowProposal,
 )
 from nessai.experimental.proposal.clustering import ClusteringFlowProposal
 
+from . import nessai_logger
 from .reparameterisations.utils import get_reparameterisation
 
-logger = logging.getLogger(__name__)
+logger = nessai_logger.getChild(__name__)
 
 
 class GWFlowProposal(FlowProposal):
@@ -69,7 +69,7 @@ class GWFlowProposal(FlowProposal):
             if n not in self._reparameterisation.parameters
         ]
         logger.info(f"Adding default reparameterisations for {parameters}")
-
+        print(logger, logger.parent)
         for p in parameters:
             logger.debug(f"Trying to add reparameterisation for {p}")
             if p in self._reparameterisation.parameters:
