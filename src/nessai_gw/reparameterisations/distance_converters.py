@@ -7,7 +7,9 @@ import logging
 import numpy as np
 from scipy import interpolate
 
-logger = logging.getLogger(__name__)
+from .. import nessai_logger
+
+logger = nessai_logger.getChild(__name__)
 
 try:
     from astropy import cosmology as cosmo
