@@ -75,7 +75,10 @@ class GWFlowProposal(FlowProposal):
             if p in self._reparameterisation.parameters:
                 logger.debug(f"Parameter {p} is already included")
                 continue
-            name, extra_params = self.aliases.get(p.lower(), (None, None))
+            if self.aliases is not None:
+                name, extra_params = self.aliases.get(p.lower(), (None, None))
+            else:
+                name, extra_params = None, None
             if name is None:
                 logger.debug(f"{p} is not a known GW parameter")
                 continue
@@ -105,10 +108,20 @@ class AugmentedGWFlowProposal(AugmentedFlowProposal, GWFlowProposal):
 
 
 class ClusteringGWFlowProposal(ClusteringFlowProposal, GWFlowProposal):
-    """Augmented version of GWFlowProposal.
+    """Clustering version of GWFlowProposal.
 
     See :obj:`~nessai.proposal.augmented.ClusteringFlowProposal` and
     :obj:`~nessai.gw.proposal.GWFlowPropsosal`
     """
 
     pass
+
+
+class LISAFlowProposal(GWFlowProposal):
+    """Proposal for LISA analyses.
+
+    Does not has the same default reparameterisations as :code:`GWFlowProposal`
+    but supports all GW reparameterisations.
+    """
+
+    aliases = None
