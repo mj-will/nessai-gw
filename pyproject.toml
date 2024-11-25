@@ -55,8 +55,10 @@ bilby = [
 [project.entry-points."nessai.proposals"]
 gwflowproposal = "nessai_gw.proposals:GWFlowProposal"
 augmentedgwflowproposal = "nessai_gw.proposals:AugmentedGWFlowProposal"
+gwmcmcflowproposal = "nessai_gw.proposals:GWMCMCFlowProposal"
 clusteringgwflowproposal = "nessai_gw.proposals:ClusteringGWFlowProposal"
 lisaflowproposal = "nessai_gw.proposals:LISAFlowProposal"
+lisamcmcflowproposal = "nessai_gw.proposals:LISAMCMCFlowProposal"
 
 [tool.pytest.ini_options]
 addopts = [
