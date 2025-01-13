@@ -22,7 +22,7 @@ keywords = [
     "machine learning",
 ]
 dependencies = [
-    "nessai>=0.13.1",
+    "nessai>=0.14.0",
     "numpy",
     "scipy",
 ]
