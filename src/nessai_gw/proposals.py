@@ -74,7 +74,10 @@ class GWReparamMixin:
             if p in self._reparameterisation.parameters:
                 logger.debug(f"Parameter {p} is already included")
                 continue
-            name, extra_params = self.aliases.get(p.lower(), (None, None))
+            if self.aliases is not None:
+                name, extra_params = self.aliases.get(p.lower(), (None, None))
+            else:
+                name, extra_params = None, None
             if name is None:
                 logger.debug(f"{p} is not a known GW parameter")
                 continue
