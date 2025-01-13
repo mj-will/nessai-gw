@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Specific proposal methods for sampling gravitational-wave models.
 """
@@ -15,8 +14,8 @@ from .reparameterisations.utils import get_reparameterisation
 logger = nessai_logger.getChild(__name__)
 
 
-class GWFlowProposal(FlowProposal):
-    """Wrapper for FlowProposal that has defaults for CBC-PE"""
+class GWReparamMixin:
+    """Mixin class for GW specific reparameterisations"""
 
     aliases = {
         "chirp_mass": ("mass", None),
@@ -94,7 +93,13 @@ class GWFlowProposal(FlowProposal):
             )
 
 
-class AugmentedGWFlowProposal(AugmentedFlowProposal, GWFlowProposal):
+class GWFlowProposal(GWReparamMixin, FlowProposal):
+    """Wrapper for FlowProposal that has defaults for CBC-PE"""
+
+    pass
+
+
+class AugmentedGWFlowProposal(GWReparamMixin, AugmentedFlowProposal):
     """Augmented version of GWFlowProposal.
 
     See :obj:`~nessai.proposal.augmented.AugmentedFlowProposal` and
@@ -104,8 +109,8 @@ class AugmentedGWFlowProposal(AugmentedFlowProposal, GWFlowProposal):
     pass
 
 
-class ClusteringGWFlowProposal(ClusteringFlowProposal, GWFlowProposal):
-    """Augmented version of GWFlowProposal.
+class ClusteringGWFlowProposal(GWReparamMixin, ClusteringFlowProposal):
+    """Clustering version of GWFlowProposal.
 
     See :obj:`~nessai.proposal.augmented.ClusteringFlowProposal` and
     :obj:`~nessai.gw.proposal.GWFlowPropsosal`
