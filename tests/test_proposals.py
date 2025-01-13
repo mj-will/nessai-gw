@@ -1,13 +1,16 @@
 # -*- coding: utf-8 -*-
 """Test the GW flow proposal method"""
+
 from math import pi
-from nessai_gw.proposals import (
-    GWFlowProposal,
-    AugmentedGWFlowProposal,
-)
+from unittest.mock import MagicMock, create_autospec, patch
+
 import numpy as np
 import pytest
-from unittest.mock import create_autospec, MagicMock, patch
+
+from nessai_gw.proposals import (
+    AugmentedGWFlowProposal,
+    GWFlowProposal,
+)
 
 
 @pytest.fixture
@@ -162,7 +165,7 @@ def test_augmented_reparameterisation_prime_prior(augmented_proposal):
     augmented_proposal._reparameterisation = MagicMock()
 
     with patch(
-        "nessai.proposal.flowproposal.FlowProposal." "x_prime_log_prior"
+        "nessai.proposal.flowproposal.FlowProposal.x_prime_log_prior"
     ) as mock:
         AugmentedGWFlowProposal.x_prime_log_prior(augmented_proposal, 1)
 

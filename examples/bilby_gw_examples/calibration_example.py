@@ -7,6 +7,7 @@ This example should take ~30 minutes to run.
 
 Adapted from the example included in bilby.
 """
+
 import bilby
 
 # Standard configuration using bilby

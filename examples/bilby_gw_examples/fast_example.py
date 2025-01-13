@@ -5,6 +5,7 @@ example should take ~5 minutes to run.
 
 Based on the Bilby example: https://git.ligo.org/lscsoft/bilby
 """
+
 import bilby
 
 outdir = "./outdir/"
@@ -118,7 +119,7 @@ result = bilby.core.sampler.run_sampler(
     plot=True,
     seed=150914,
     analytic_priors=True,  # Bilby priors can be sampled from directly
-    n_pool=4,              # Number of processes to use
+    n_pool=4,  # Number of processes to use
 )
 
 # Produce corner plots

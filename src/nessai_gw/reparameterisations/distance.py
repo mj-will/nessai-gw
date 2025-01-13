@@ -1,11 +1,10 @@
+from nessai.priors import log_uniform_prior
 from nessai.reparameterisations import (
     RescaleToBounds,
 )
-from nessai.priors import log_uniform_prior
 
-from .distance_converters import get_distance_converter
 from .. import nessai_logger
-
+from .distance_converters import get_distance_converter
 
 logger = nessai_logger.getChild(__name__)
 
@@ -53,7 +52,6 @@ class DistanceReparameterisation(RescaleToBounds):
         prior_bounds=None,
         **kwargs,
     ):
-
         if isinstance(parameters, str):
             parameters = [parameters]
 

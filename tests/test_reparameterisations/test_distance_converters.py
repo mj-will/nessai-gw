@@ -2,10 +2,12 @@
 """
 Test the distance converter classes.
 """
+
+from unittest.mock import MagicMock, Mock, call, create_autospec, patch
+
 import numpy as np
 import pytest
 from scipy import stats
-from unittest.mock import MagicMock, Mock, call, create_autospec, patch
 
 from nessai_gw.reparameterisations.distance_converters import (
     ComovingDistanceConverter,

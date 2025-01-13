@@ -2,8 +2,9 @@
 """
 Utilities specific to the gw subpackage.
 """
+
 from abc import ABC, abstractmethod
-import logging
+
 import numpy as np
 from scipy import interpolate
 
@@ -12,8 +13,8 @@ from .. import nessai_logger
 logger = nessai_logger.getChild(__name__)
 
 try:
-    from astropy import cosmology as cosmo
     import astropy.units as u
+    from astropy import cosmology as cosmo
 except ImportError:
     logger.debug(
         "Could not import astropy, running with reduced functionality"
