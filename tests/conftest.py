@@ -1,5 +1,6 @@
-import pytest
 from typing import Callable
+
+import pytest
 
 
 @pytest.fixture()
@@ -26,7 +27,6 @@ def injection_parameters():
 
 @pytest.fixture()
 def get_bilby_priors_and_likelihood():
-
     def get_priors_and_likelihood(parameters, injection_parameters):
         import bilby
 
