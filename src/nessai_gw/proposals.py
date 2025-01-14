@@ -3,6 +3,7 @@ Specific proposal methods for sampling gravitational-wave models.
 """
 
 from nessai.experimental.proposal.clustering import ClusteringFlowProposal
+from nessai.experimental.proposal.mcmc import MCMCFlowProposal
 from nessai.proposal import (
     AugmentedFlowProposal,
     FlowProposal,
@@ -116,6 +117,16 @@ class ClusteringGWFlowProposal(GWReparamMixin, ClusteringFlowProposal):
     """Clustering version of GWFlowProposal.
 
     See :obj:`~nessai.proposal.augmented.ClusteringFlowProposal` and
+    :obj:`~nessai.gw.proposal.GWFlowPropsosal`
+    """
+
+    pass
+
+
+class MCMCGWFlowProposal(GWReparamMixin, MCMCFlowProposal):
+    """MCMC version of GWFlowProposal.
+
+    See :obj:`~nessai.proposal.augmented.MCMCFlowProposal` and
     :obj:`~nessai.gw.proposal.GWFlowPropsosal`
     """
 
