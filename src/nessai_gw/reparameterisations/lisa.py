@@ -1,10 +1,25 @@
 """Reparameterisations for LISA"""
 
+from collections import namedtuple
 from typing import Iterable, Union
 
 import numpy as np
-from nessai.livepoint import empty_structured_array
 from nessai.reparameterisations.base import Reparameterisation
+
+ModeID = namedtuple("ModeID", ["long_num", "lat_num", "phase_num", "index"])
+ModeID.__doc__ = """Class for storing extrinsic mode information.
+
+Attributes
+----------
+long_num : int or array_like
+    The index of the longitude bin.
+lat_num : int or array_like
+    The index of the latitude bin.
+phase_num : int or array_like
+    The index of the phase bin.
+index : int or array_like
+    The overall mode index. Will be between 0 and 16.
+"""
 
 
 class LISAExtrinsicSymmetry(Reparameterisation):
@@ -28,6 +43,13 @@ class LISAExtrinsicSymmetry(Reparameterisation):
         discrete parameter must be handled appropriately when sampling.
         If False, the mode index is not stored and a random index is chosen
         when mapping from X-prime to X.
+    estimate_mode_weights :
+        If True, the mode weights will be estimated from the samples. This
+        will only work if `include_mode_index` is False.
+    minimum_mode_weight :
+        Minimum weight for each mode. If the estimated weight is below this
+        value, the weight will be set to this value. Set to zero or None to
+        disable.
     lambda_parameter :
         Optional name for the lambda (ecliptic longitude) parameter. If not
         specified, the name will be inferred from a list of known parameters.
@@ -44,6 +66,8 @@ class LISAExtrinsicSymmetry(Reparameterisation):
         Optional name for the phase parameters. If not specified, the name
         will be inferred from the list of known parameters. If no such
         parameter is found, the phase will not be included.
+    rng :
+        Random number generator.
     """
 
     requires_bounded_prior = True
@@ -95,13 +119,18 @@ class LISAExtrinsicSymmetry(Reparameterisation):
         parameters: list[str] = None,
         prior_bounds: dict[str, Iterable] = None,
         include_mode_index: bool = False,
+        estimate_mode_weights: bool = False,
+        minimum_mode_weight: float = None,
         lambda_parameter: str = None,
         beta_parameter: str = None,
         psi_parameter: str = None,
         iota_parameter: str = None,
         phase_parameter: str = None,
+        rng: np.random.Generator = None,
     ) -> None:
-        super().__init__(parameters=parameters, prior_bounds=prior_bounds)
+        super().__init__(
+            parameters=parameters, prior_bounds=prior_bounds, rng=rng
+        )
 
         self.lambda_parameter = lambda_parameter
         self.beta_parameter = beta_parameter
@@ -112,12 +141,31 @@ class LISAExtrinsicSymmetry(Reparameterisation):
 
         self.prime_parameters = [p + "_folded" for p in self.parameters]
 
+        self.estimate_mode_weights = estimate_mode_weights
+        self.minimum_mode_weight = minimum_mode_weight
+        self.mode_weights = None
+
+        if self.estimate_mode_weights and self.include_mode_index:
+            raise RuntimeError(
+                "Cannot estimate mode weights with `mode_index=True`"
+            )
+
         if self.include_mode_index:
             self.prime_parameters.append("mode_index")
 
     def determine_parameter(
-        self, known_parameters: frozenset, required=True
+        self, known_parameters: frozenset, required: bool = True
     ) -> str:
+        """Determine the parameter name from a set of known parameters.
+
+        Parameters
+        ----------
+        known_parameters : frozenset
+            Set of known parameter names for the given parameter.
+        required : bool
+            If True, an error will be raised if no parameters match. If False,
+            None will be returned if no parameters match.
+        """
         params = set(self.parameters)
         names = list(known_parameters.intersection(params))
         if len(names) > 1:
@@ -226,19 +274,35 @@ class LISAExtrinsicSymmetry(Reparameterisation):
 
     @property
     def n_modes(self):
+        """Number of modes
+
+        Depending on the value of `phase_parameter`, the number of modes will
+        be either 8 or 16.
+        """
         if self.phase_parameter:
             return 16
         else:
             return 8
 
     def update(self, x):
-        x_prime = empty_structured_array(x.size, self.prime_parameters)
-        log_j = np.zeros(x.size)
-        _, x_prime, log_j = self._fold(x, x_prime, log_j)
+        """Update the reparameterisation state."""
+        if self.estimate_mode_weights:
+            mode_ids = self.determine_modes(x)
+            counts = np.bincount(mode_ids.index, minlength=self.n_modes)
+            mode_weights = counts / counts.sum()
+            if self.minimum_mode_weight:
+                mode_weights = np.maximum(
+                    mode_weights, self.minimum_mode_weight
+                )
+            self.mode_weights = mode_weights / mode_weights.sum()
+        return x
 
-    def _fold(
-        self, x: np.ndarray, x_prime: np.ndarray, log_j: np.ndarray
-    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def reset(self) -> None:
+        """Reset the reparameterisation."""
+        self.mode_weights = None
+
+    def determine_modes(self, x: np.ndarray) -> ModeID:
+        """Determine the mode indices for each sample."""
         long_num = np.digitize(x[self.lambda_parameter], self.lambda_bins) - 1
         lat_num = np.digitize(x[self.beta_parameter], self.beta_bins) - 1
         if self.phase_parameter:
@@ -247,32 +311,63 @@ class LISAExtrinsicSymmetry(Reparameterisation):
             )
         else:
             phase_num = 0
+        index = (long_num + (lat_num * 4)) + (8 * phase_num)
+        return ModeID(long_num, lat_num, phase_num, index)
+
+    def unfold_modes(self, mode_index: np.ndarray) -> ModeID:
+        """Unfold the mode index into the mode parameters."""
+        # Will be zero if mode_index < 8
+        phase_num = mode_index // 8
+        long_num = (mode_index - (8 * phase_num)) % 4
+        lat_num = (mode_index - (8 * phase_num)) // 4
+        return ModeID(long_num, lat_num, phase_num, mode_index)
+
+    def sample_mode_index(self, size: int) -> np.ndarray:
+        """Sample a mode index.
+
+        If `estimate_mode_weights` is True, the mode index will be sampled
+        according to the estimated mode weights. Otherwise, the mode index will
+        be sampled uniformly.
+
+        If `estimate_mode_weights` is True, `update` must be called before
+        calling this method.
+        """
+        if self.estimate_mode_weights:
+            return self.rng.choice(
+                self.n_modes, size=size, p=self.mode_weights
+            )
+        else:
+            return self.rng.choice(self.n_modes, size=size)
+
+    def fold(
+        self, x: np.ndarray, x_prime: np.ndarray, log_j: np.ndarray
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        mode_ids = self.determine_modes(x)
 
         if self.include_mode_index:
-            x_prime["mode_index"] = (long_num + (lat_num * 4)) + (
-                8 * phase_num
-            )
+            x_prime["mode_index"] = mode_ids.index
         x_prime[self.psi_parameter_prime] = np.mod(
-            x[self.psi_parameter] - (long_num * 0.5 * np.pi),
+            x[self.psi_parameter] - (mode_ids.long_num * 0.5 * np.pi),
             np.pi,
         )
         x_prime[self.psi_parameter_prime] = np.where(
-            lat_num,
+            mode_ids.lat_num,
             x_prime[self.psi_parameter_prime],
             np.pi - x_prime[self.psi_parameter_prime],
         )
         x_prime[self.iota_parameter_prime] = np.where(
-            lat_num,
+            mode_ids.lat_num,
             x[self.iota_parameter],
             np.pi - x[self.iota_parameter],
         )
         x_prime[self.beta_parameter_prime] = np.where(
-            lat_num,
+            mode_ids.lat_num,
             x[self.beta_parameter],
             -x[self.beta_parameter],
         )
         x_prime[self.lambda_parameter_prime] = np.mod(
-            x[self.lambda_parameter] - long_num * 0.5 * np.pi, 2 * np.pi
+            x[self.lambda_parameter] - mode_ids.long_num * 0.5 * np.pi,
+            2 * np.pi,
         )
         if self.phase_parameter:
             x_prime[self.phase_parameter_prime] = np.mod(
@@ -281,57 +376,55 @@ class LISAExtrinsicSymmetry(Reparameterisation):
             )
         return x, x_prime, log_j
 
-    def _unfold(
+    def unfold(
         self, x: np.ndarray, x_prime: np.ndarray, log_j: np.ndarray
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         if self.include_mode_index:
             mode_index = x_prime["mode_index"].copy()
         else:
-            mode_index = np.random.choice(self.n_modes, size=x.size)
-        # If phase is not include this will be 0
-        phase_num = mode_index // 8
-        long_num = (mode_index - (8 * phase_num)) % 4
-        lat_num = (mode_index - (8 * phase_num)) // 4
+            mode_index = self.sample_mode_index(size=x.shape[0])
+
+        mode_ids = self.unfold_modes(mode_index)
 
         x[self.lambda_parameter] = np.mod(
-            x_prime[self.lambda_parameter_prime] + long_num * 0.5 * np.pi,
+            x_prime[self.lambda_parameter_prime]
+            + mode_ids.long_num * 0.5 * np.pi,
             2 * np.pi,
         )
         x[self.beta_parameter] = np.where(
-            lat_num,
+            mode_ids.lat_num,
             x_prime[self.beta_parameter_prime],
             -x_prime[self.beta_parameter_prime],
         )
         x[self.iota_parameter] = np.where(
-            lat_num,
+            mode_ids.lat_num,
             x_prime[self.iota_parameter_prime],
             np.pi - x_prime[self.iota_parameter_prime],
         )
         x[self.psi_parameter] = np.where(
-            lat_num,
+            mode_ids.lat_num,
             x_prime[self.psi_parameter_prime],
             np.pi - x_prime[self.psi_parameter_prime],
         )
         x[self.psi_parameter] = np.mod(
-            x[self.psi_parameter] + (long_num * 0.5 * np.pi),
+            x[self.psi_parameter] + (mode_ids.long_num * 0.5 * np.pi),
             np.pi,
         )
         if self.phase_parameter:
-            phase_num = mode_index // 8
-            print("Phase num", phase_num.max())
             x[self.phase_parameter] = (
-                x_prime[self.phase_parameter_prime] + phase_num * np.pi
+                x_prime[self.phase_parameter_prime]
+                + mode_ids.phase_num * np.pi
             )
         return x, x_prime, log_j
 
     def reparameterise(
         self, x: np.ndarray, x_prime: np.ndarray, log_j: np.ndarray, **kwargs
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-        x, x_prime, log_j = self._fold(x, x_prime, log_j)
+        x, x_prime, log_j = self.fold(x, x_prime, log_j)
         return x, x_prime, log_j
 
     def inverse_reparameterise(
         self, x: np.ndarray, x_prime: np.ndarray, log_j: np.ndarray, **kwargs
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-        x, x_prime, log_j = self._unfold(x, x_prime, log_j)
+        x, x_prime, log_j = self.unfold(x, x_prime, log_j)
         return x, x_prime, log_j
