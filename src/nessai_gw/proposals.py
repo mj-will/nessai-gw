@@ -131,3 +131,23 @@ class MCMCGWFlowProposal(GWReparamMixin, MCMCFlowProposal):
     """
 
     pass
+
+
+class LISAFlowProposal(GWReparamMixin, FlowProposal):
+    """Version of GWFlowProposal for LISA sources.
+
+    This class supports all the GW-specific reparameterisations, but does
+    not have them enabled by default.
+    """
+
+    aliases = None
+
+
+class MCMCLISAFlowProposal(GWReparamMixin, MCMCFlowProposal):
+    """MCMC version of LISAFlowProposal.
+
+    This class supports all the GW-specific reparameterisations, but does
+    not have them enabled by default.
+    """
+
+    aliases = None
