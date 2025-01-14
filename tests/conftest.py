@@ -1,6 +1,19 @@
 from typing import Callable
 
+import numpy as np
 import pytest
+
+_RNG = np.random.default_rng(1234)
+
+
+@pytest.fixture()
+def rng():
+    return _RNG
+
+
+@pytest.fixture(params=[1, 100])
+def n_samples(request):
+    return request.param
 
 
 @pytest.fixture()
