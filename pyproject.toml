@@ -51,6 +51,7 @@ bilby = [
 ]
 
 [tool.setuptools_scm]
+version_scheme = "release-branch-semver"
 
 [project.entry-points."nessai.proposals"]
 gwflowproposal = "nessai_gw.proposals:GWFlowProposal"
