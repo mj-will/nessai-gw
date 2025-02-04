@@ -1,0 +1,7 @@
+sphinx
+sphinx-autoapi
+sphinx_tabs
+sphinx-book-theme
+numpydoc
+nessai
+nessai-gw
