@@ -58,6 +58,8 @@ gwflowproposal = "nessai_gw.proposals:GWFlowProposal"
 augmentedgwflowproposal = "nessai_gw.proposals:AugmentedGWFlowProposal"
 clusteringgwflowproposal = "nessai_gw.proposals:ClusteringGWFlowProposal"
 mcmcgwflowproposal = "nessai_gw.proposals:MCMCGWFlowProposal"
+lisaflowproposal = "nessai_gw.proposals:LISAFlowProposal"
+mcmclisaflowproposal = "nessai_gw.proposals:MCMCLISAFlowProposal"
 
 [tool.pytest.ini_options]
 addopts = [
