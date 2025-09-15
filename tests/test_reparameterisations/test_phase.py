@@ -1,14 +1,16 @@
+from unittest.mock import create_autospec, patch
+
+import numpy as np
 import pytest
-from nessai_gw.reparameterisations import (
-    DeltaPhaseReparameterisation,
-)
 from nessai.livepoint import (
     dict_to_live_points,
     empty_structured_array,
 )
 from nessai.utils.testing import assert_structured_arrays_equal
-import numpy as np
-from unittest.mock import patch, create_autospec
+
+from nessai_gw.reparameterisations import (
+    DeltaPhaseReparameterisation,
+)
 
 
 @pytest.fixture

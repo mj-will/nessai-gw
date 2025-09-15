@@ -1,8 +1,9 @@
 """Integration test for the reparameterisation in GWFlowProposal"""
 
-from nessai_gw.proposals import GWFlowProposal
 import numpy as np
 import pytest
+
+from nessai_gw.proposals import GWFlowProposal
 
 
 @pytest.mark.requires("bilby")

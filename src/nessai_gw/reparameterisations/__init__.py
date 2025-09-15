@@ -1,7 +1,9 @@
 from nessai.reparameterisations import (
     AnglePair,
-    RescaleToBounds,
     ReparameterisationDict,
+    RescaleToBounds,
+)
+from nessai.reparameterisations import (
     default_reparameterisations as base_reparameterisations,
 )
 

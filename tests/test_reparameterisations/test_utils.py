@@ -1,3 +1,7 @@
+from unittest.mock import patch
+
+import pytest
+
 from nessai_gw.reparameterisations import known_reparameterisations
 from nessai_gw.reparameterisations.distance import (
     DistanceReparameterisation,
@@ -5,8 +9,6 @@ from nessai_gw.reparameterisations.distance import (
 from nessai_gw.reparameterisations.utils import (
     get_reparameterisation,
 )
-import pytest
-from unittest.mock import patch
 
 
 def test_get_gw_reparameterisation():

@@ -1,10 +1,9 @@
+import numpy as np
 from nessai.reparameterisations import (
     Reparameterisation,
 )
-import numpy as np
 
 from .. import nessai_logger
-
 
 logger = nessai_logger.getChild(__name__)
 

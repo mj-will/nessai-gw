@@ -1,8 +1,10 @@
+from unittest.mock import MagicMock, create_autospec, patch
+
 import pytest
+
 from nessai_gw.reparameterisations import (
     DistanceReparameterisation,
 )
-from unittest.mock import MagicMock, patch, create_autospec
 
 
 @pytest.fixture
@@ -48,7 +50,7 @@ def test_distance_reparameterisation_init(
         if has_jacobian is False:
             with pytest.raises(
                 RuntimeError,
-                match="Reparameterisations without tractable Jacobians are no"
+                match="Reparameterisations without tractable Jacobians are no",
             ):
                 DistanceReparameterisation.__init__(
                     distance_reparam,
