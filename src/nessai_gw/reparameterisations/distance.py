@@ -1,4 +1,3 @@
-from nessai.priors import log_uniform_prior
 from nessai.reparameterisations import (
     RescaleToBounds,
 )
@@ -70,6 +69,12 @@ class DistanceReparameterisation(RescaleToBounds):
             **converter_kwargs,
         )
 
+        if self.distance_converter.has_jacobian is False:
+            raise RuntimeError(
+                "Reparameterisations without tractable Jacobians are no"
+                " longer supported. Consider using unit hypercube sampling."
+            )
+
         pre_rescaling = (
             self.distance_converter.to_uniform_parameter,
             self.distance_converter.from_uniform_parameter,
@@ -77,24 +82,10 @@ class DistanceReparameterisation(RescaleToBounds):
 
         super().__init__(
             parameters=parameters,
-            prior=prior,
             prior_bounds=prior_bounds,
             pre_rescaling=pre_rescaling,
             **kwargs,
         )
-
-        if self.distance_converter.has_conversion:
-            self._prime_prior = log_uniform_prior
-            self.has_prime_prior = True
-            if not self.distance_converter.has_jacobian:
-                logger.debug(
-                    "Distance converter does not have Jacobian, "
-                    "require prime prior"
-                )
-                self.requires_prime_prior = True
-            self.update_prime_prior_bounds()
-        else:
-            self.has_prime_prior = False
 
         self.detect_edges_kwargs["allowed_bounds"] = allowed_bounds
         self.detect_edges_kwargs["allow_both"] = allow_both

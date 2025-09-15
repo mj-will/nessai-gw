@@ -1,7 +1,8 @@
+from typing import Callable, Union
+
 from nessai.reparameterisations import (
     get_reparameterisation as get_base_reparameterisation,
 )
-from typing import Callable, Union
 
 
 def get_reparameterisation(reparameterisation: Union[str, Callable]):
