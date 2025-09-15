@@ -11,20 +11,18 @@ def distance_reparam():
 
 
 @pytest.mark.parametrize(
-    "has_conversion, has_jacobian, has_prime_prior, requires_prime_prior",
+    "has_conversion, has_jacobian, ",
     [
-        (False, True, False, False),
-        (False, False, False, False),
-        (True, False, True, True),
-        (True, True, True, False),
+        (False, True),
+        (False, False),
+        (True, False),
+        (True, True),
     ],
 )
 def test_distance_reparameterisation_init(
     distance_reparam,
     has_conversion,
     has_jacobian,
-    has_prime_prior,
-    requires_prime_prior,
 ):
     """Test the init method for the DistanceReparameterisation class.
 
@@ -46,19 +44,29 @@ def test_distance_reparameterisation_init(
         "nessai_gw.reparameterisations.distance.get_distance_converter",
         return_value=mock_converter_class,
     ) as converter_fn:
-        DistanceReparameterisation.__init__(
-            distance_reparam,
-            parameters=parameter,
-            prior_bounds=prior_bounds,
-            prior=prior,
-        )
+        # Catch possible error
+        if has_jacobian is False:
+            with pytest.raises(
+                RuntimeError,
+                match="Reparameterisations without tractable Jacobians are no"
+            ):
+                DistanceReparameterisation.__init__(
+                    distance_reparam,
+                    parameters=parameter,
+                    prior_bounds=prior_bounds,
+                    prior=prior,
+                )
+
+        else:
+            DistanceReparameterisation.__init__(
+                distance_reparam,
+                parameters=parameter,
+                prior_bounds=prior_bounds,
+                prior=prior,
+            )
 
     converter_fn.assert_called_once_with(prior)
     mock_converter_class.assert_called_once_with(d_min=10.0, d_max=100.0)
-    assert distance_reparam.has_prime_prior is has_prime_prior
-    assert distance_reparam.requires_prime_prior is requires_prime_prior
-    # If the reparam includes a conversion, the prime priors should be updated
-    assert distance_reparam.update_prime_prior_bounds.called is has_conversion
 
 
 def test_distance_reparameterisation_n_parameters_error(distance_reparam):

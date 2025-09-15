@@ -153,26 +153,6 @@ def test_augmented_reparameterisation_prior(augmented_proposal):
     mock.assert_called_once_with(1)
 
 
-def test_augmented_reparameterisation_prime_prior(augmented_proposal):
-    """Test to make sure the correct components of the primed_log prior are
-    being called.
-
-    These are:
-    - agumented_prior
-    - FlowProposal.x_prime_log_prior
-    """
-    augmented_proposal.augmented_prior = MagicMock()
-    augmented_proposal._reparameterisation = MagicMock()
-
-    with patch(
-        "nessai.proposal.flowproposal.FlowProposal.x_prime_log_prior"
-    ) as mock:
-        AugmentedGWFlowProposal.x_prime_log_prior(augmented_proposal, 1)
-
-    augmented_proposal.augmented_prior.assert_called_once_with(1)
-    mock.assert_called_once_with(1)
-
-
 @pytest.mark.integration_test
 def test_default_reparameterisations(caplog, tmpdir):
     """Assert that the GW defaults are used even in reparameterisations
