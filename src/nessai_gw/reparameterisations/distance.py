@@ -49,6 +49,7 @@ class DistanceReparameterisation(RescaleToBounds):
         converter_kwargs=None,
         prior=None,
         prior_bounds=None,
+        rng=None,
         **kwargs,
     ):
         if isinstance(parameters, str):
@@ -84,6 +85,7 @@ class DistanceReparameterisation(RescaleToBounds):
             parameters=parameters,
             prior_bounds=prior_bounds,
             pre_rescaling=pre_rescaling,
+            rng=rng,
             **kwargs,
         )
 

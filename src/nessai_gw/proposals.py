@@ -2,6 +2,8 @@
 Specific proposal methods for sampling gravitational-wave models.
 """
 
+from inspect import signature
+
 from nessai.experimental.proposal.clustering import ClusteringFlowProposal
 from nessai.experimental.proposal.mcmc import MCMCFlowProposal
 from nessai.proposal import (
@@ -87,13 +89,15 @@ class GWReparamMixin:
             else:
                 p = [p]
             prior_bounds = {k: self.model.bounds[k] for k in p}
-            reparam, kwargs = get_reparameterisation(name)
+            ReparamClass, kwargs = get_reparameterisation(name)
+            if "rng" in signature(ReparamClass.__init__).parameters:
+                kwargs["rng"] = self.rng
             logger.info(
-                f"Adding reparameterisation {reparam.__name__} for {p} "
+                f"Adding reparameterisation {ReparamClass.__name__} for {p} "
                 f"with config: {kwargs}"
             )
             self._reparameterisation.add_reparameterisation(
-                reparam(parameters=p, prior_bounds=prior_bounds, **kwargs)
+                ReparamClass(parameters=p, prior_bounds=prior_bounds, **kwargs)
             )
 
 
