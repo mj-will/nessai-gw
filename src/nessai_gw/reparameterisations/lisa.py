@@ -94,6 +94,7 @@ class LISAExtrinsicSymmetry(Reparameterisation):
     _iota_parameter = None
     _phase_parameter = None
     _beta_bins = None
+    _iota_mode = None
 
     known_lambda_parameters = frozenset(
         [
@@ -119,7 +120,13 @@ class LISAExtrinsicSymmetry(Reparameterisation):
     known_iota_parameters = frozenset(
         [
             "iota",
+            "inc",
             "inclination",
+            "cos_iota",
+            "cosiota",
+            "cos_inclination",
+            "cosinc",
+            "cos_inc",
         ]
     )
 
@@ -249,10 +256,15 @@ class LISAExtrinsicSymmetry(Reparameterisation):
     def iota_parameter(self, name: Union[str, None]):
         if name is None:
             name = self.determine_parameter(self.known_iota_parameters)
-        if self.prior_bounds[name][0] != 0:
+
+        lower, upper = self.prior_bounds[name]
+        if np.isclose(lower, 0.0) and np.isclose(upper, np.pi):
+            self._iota_mode = "angle"
+        elif np.isclose(lower, -1.0) and np.isclose(upper, 1.0):
+            self._iota_mode = "cos"
+        else:
             raise RuntimeError
-        if not np.isclose(self.prior_bounds[name][1], np.pi):
-            raise RuntimeError
+
         self._iota_parameter = name
 
     @property
@@ -360,6 +372,14 @@ class LISAExtrinsicSymmetry(Reparameterisation):
         else:
             return self.rng.choice(self.n_modes, size=size)
 
+    def _reflect_iota(self, iota: np.ndarray) -> np.ndarray:
+        if self._iota_mode == "angle":
+            return np.pi - iota
+        elif self._iota_mode == "cos":
+            return -iota
+        else:
+            raise RuntimeError("Unknown inclination mode")
+
     def fold(
         self, x: np.ndarray, x_prime: np.ndarray, log_j: np.ndarray
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -379,7 +399,7 @@ class LISAExtrinsicSymmetry(Reparameterisation):
         x_prime[self.iota_parameter_prime] = np.where(
             mode_ids.lat_num,
             x[self.iota_parameter],
-            np.pi - x[self.iota_parameter],
+            self._reflect_iota(x[self.iota_parameter]),
         )
         x_prime[self.beta_parameter_prime] = np.where(
             mode_ids.lat_num,
@@ -420,7 +440,7 @@ class LISAExtrinsicSymmetry(Reparameterisation):
         x[self.iota_parameter] = np.where(
             mode_ids.lat_num,
             x_prime[self.iota_parameter_prime],
-            np.pi - x_prime[self.iota_parameter_prime],
+            self._reflect_iota(x_prime[self.iota_parameter_prime]),
         )
         x[self.psi_parameter] = np.where(
             mode_ids.lat_num,
