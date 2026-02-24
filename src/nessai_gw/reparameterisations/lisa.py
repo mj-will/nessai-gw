@@ -31,6 +31,17 @@ class LISAExtrinsicSymmetry(Reparameterisation):
     [1]: https://arxiv.org/abs/2003.00357
     [2]: https://arxiv.org/abs/2306.16429
 
+    Notes
+    -----
+
+    The reparameterisation is not one-to-one, as there are multiple modes in the
+    original parameter space that map to the same point in the folded space. The
+    `include_mode_index` option can be used to make the reparameterisation
+    one-to-one, but this requires handling a discrete parameter when sampling.
+
+    The reparameterisations can handle both ecliptic latitude and sine of
+    ecliptic latitude parameters, but not both at the same time.
+
     Parameters
     ----------
     parameters :
@@ -74,6 +85,7 @@ class LISAExtrinsicSymmetry(Reparameterisation):
     one_to_one = False
     lambda_bins = (np.pi / 2) * np.arange(5)
     beta_bins = np.array([-np.pi / 2, 0.0, np.pi / 2])
+    sin_beta_bins = np.array([-1.0, 0.0, 1.0])
     phase_bins = np.pi * np.arange(3)
 
     _lambda_parameter = None
@@ -81,6 +93,7 @@ class LISAExtrinsicSymmetry(Reparameterisation):
     _psi_parameter = None
     _iota_parameter = None
     _phase_parameter = None
+    _beta_bins = None
 
     known_lambda_parameters = frozenset(
         [
@@ -92,6 +105,9 @@ class LISAExtrinsicSymmetry(Reparameterisation):
         [
             "eclipticlatitude",
             "beta",
+            "sin_beta",
+            "sinbeta",
+            "sin_eclipticlatitude",
         ]
     )
     known_psi_parameters = frozenset(
@@ -200,10 +216,15 @@ class LISAExtrinsicSymmetry(Reparameterisation):
     def beta_parameter(self, name: Union[str, None]) -> None:
         if name is None:
             name = self.determine_parameter(self.known_beta_parameters)
-        if not np.isclose(self.prior_bounds[name][0], -np.pi / 2):
+
+        lower, upper = self.prior_bounds[name]
+        if np.isclose(lower, -np.pi / 2) and np.isclose(upper, np.pi / 2):
+            self._beta_bins = self.beta_bins
+        elif np.isclose(lower, -1.0) and np.isclose(upper, 1.0):
+            self._beta_bins = self.sin_beta_bins
+        else:
             raise RuntimeError
-        if not np.isclose(self.prior_bounds[name][1], np.pi / 2):
-            raise RuntimeError
+
         self._beta_parameter = name
 
     @property
@@ -304,7 +325,7 @@ class LISAExtrinsicSymmetry(Reparameterisation):
     def determine_modes(self, x: np.ndarray) -> ModeID:
         """Determine the mode indices for each sample."""
         long_num = np.digitize(x[self.lambda_parameter], self.lambda_bins) - 1
-        lat_num = np.digitize(x[self.beta_parameter], self.beta_bins) - 1
+        lat_num = np.digitize(x[self.beta_parameter], self._beta_bins) - 1
         if self.phase_parameter:
             phase_num = (
                 np.digitize(x[self.phase_parameter], self.phase_bins) - 1
