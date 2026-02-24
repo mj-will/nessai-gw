@@ -11,28 +11,34 @@ def beta_parameter_name(request):
     return request.param
 
 
+@pytest.fixture(params=["iota", "cos_iota"])
+def iota_parameter_name(request):
+    return request.param
+
+
 @pytest.fixture
-def extrinsic_parameters(beta_parameter_name):
+def extrinsic_parameters(beta_parameter_name, iota_parameter_name):
     return [
         "eclipticlongitude",
         beta_parameter_name,
         "polarization",
-        "iota",
+        iota_parameter_name,
     ]
 
 
 @pytest.fixture
-def extrinsic_prior_bounds(beta_parameter_name):
+def extrinsic_prior_bounds(beta_parameter_name, iota_parameter_name):
     beta_bounds = (
         [-np.pi / 2, np.pi / 2]
         if beta_parameter_name == "eclipticlatitude"
         else [-1.0, 1.0]
     )
+    iota_bounds = [0, np.pi] if iota_parameter_name == "iota" else [-1.0, 1.0]
     return {
         "eclipticlongitude": [0, 2 * np.pi],
         beta_parameter_name: beta_bounds,
         "polarization": [0, np.pi],
-        "iota": [0, np.pi],
+        iota_parameter_name: iota_bounds,
     }
 
 
@@ -85,7 +91,7 @@ def test_determine_modes_expected_indices(
     )
     x[reparam.beta_parameter] = np.array([0.2] * 4 + [-0.2] * 4)
     x["polarization"] = 0.5
-    x["iota"] = 1.0
+    x[reparam.iota_parameter] = 0.5
 
     mode_ids = reparam.determine_modes(x)
 
@@ -123,3 +129,24 @@ def test_unfold_modes_with_phase_indices(
         mode_ids.long_num + 4 * mode_ids.lat_num + 8 * mode_ids.phase_num
     )
     np.testing.assert_array_equal(reconstructed, mode_index)
+
+
+def test_sin_iota_not_supported():
+    parameters = [
+        "eclipticlongitude",
+        "eclipticlatitude",
+        "polarization",
+        "sin_iota",
+    ]
+    prior_bounds = {
+        "eclipticlongitude": [0, 2 * np.pi],
+        "eclipticlatitude": [-np.pi / 2, np.pi / 2],
+        "polarization": [0, np.pi],
+        "sin_iota": [0.0, 1.0],
+    }
+
+    with pytest.raises(RuntimeError):
+        LISAExtrinsicSymmetry(
+            parameters=parameters,
+            prior_bounds=prior_bounds,
+        )
