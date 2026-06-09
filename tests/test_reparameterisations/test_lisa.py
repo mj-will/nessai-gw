@@ -131,6 +131,79 @@ def test_unfold_modes_with_phase_indices(
     np.testing.assert_array_equal(reconstructed, mode_index)
 
 
+def test_mode_subset_mirror_antipodal_without_phase(
+    extrinsic_parameters, extrinsic_prior_bounds
+):
+    reparam = LISAExtrinsicSymmetry(
+        parameters=extrinsic_parameters,
+        prior_bounds=extrinsic_prior_bounds,
+        mode_subset="mirror-antipodal",
+    )
+
+    np.testing.assert_array_equal(reparam.allowed_mode_indices, [0, 2, 4, 6])
+
+
+def test_mode_subset_mirror_antipodal_with_phase(
+    extrinsic_parameters, extrinsic_prior_bounds
+):
+    parameters = extrinsic_parameters + ["phase"]
+    prior_bounds = {**extrinsic_prior_bounds, "phase": [0, 2 * np.pi]}
+
+    reparam = LISAExtrinsicSymmetry(
+        parameters=parameters,
+        prior_bounds=prior_bounds,
+        mode_subset="mirror-antipodal",
+    )
+
+    np.testing.assert_array_equal(
+        reparam.allowed_mode_indices,
+        [0, 2, 4, 6, 8, 10, 12, 14],
+    )
+
+
+def test_allowed_mode_indices_override_subset(
+    extrinsic_parameters, extrinsic_prior_bounds
+):
+    reparam = LISAExtrinsicSymmetry(
+        parameters=extrinsic_parameters,
+        prior_bounds=extrinsic_prior_bounds,
+        mode_subset="mirror-antipodal",
+        allowed_mode_indices=[0, 4],
+    )
+
+    np.testing.assert_array_equal(reparam.allowed_mode_indices, [0, 4])
+
+
+def test_phase_parameter_can_be_present_without_phase_fold(
+    extrinsic_parameters, extrinsic_prior_bounds, rng, n_samples
+):
+    parameters = extrinsic_parameters + ["phase"]
+    prior_bounds = {**extrinsic_prior_bounds, "phase": [0, 2 * np.pi]}
+
+    reparam = LISAExtrinsicSymmetry(
+        parameters=parameters,
+        prior_bounds=prior_bounds,
+        include_mode_index=True,
+        phase_fold=False,
+    )
+
+    x = empty_structured_array(n_samples, reparam.parameters)
+    x_prime = empty_structured_array(n_samples, reparam.prime_parameters)
+    log_j = np.zeros(n_samples)
+    for param, bounds in prior_bounds.items():
+        x[param] = rng.uniform(*bounds, size=n_samples)
+
+    x, x_prime, log_j = reparam.reparameterise(x, x_prime, log_j)
+    x_re, _, log_j_re = reparam.inverse_reparameterise(
+        x.copy(), x_prime.copy(), log_j.copy()
+    )
+
+    assert reparam.n_modes == 8
+    np.testing.assert_allclose(x_prime["phase_folded"], x["phase"])
+    assert_structured_arrays_equal(x_re, x, atol=1e-14)
+    np.testing.assert_equal(log_j_re, 0.0)
+
+
 def test_sin_iota_not_supported():
     parameters = [
         "eclipticlongitude",
