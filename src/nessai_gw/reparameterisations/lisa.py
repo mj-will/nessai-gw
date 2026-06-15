@@ -227,10 +227,10 @@ class LISAExtrinsicSymmetry(Reparameterisation):
 
         if self.include_mode_index:
             self.prime_parameters.append(self.skymode_parameter)
-        if self.n_phase_folds and self.n_phase_folds > 1:
-            self.prime_parameters.append(self.phase_mode_parameter)
-        if self.n_polarization_folds and self.n_polarization_folds > 1:
-            self.prime_parameters.append(self.polarization_mode_parameter)
+            if self.n_phase_folds and self.n_phase_folds > 1:
+                self.prime_parameters.append(self.phase_mode_parameter)
+            if self.n_polarization_folds and self.n_polarization_folds > 1:
+                self.prime_parameters.append(self.polarization_mode_parameter)
         self.one_to_one = self.include_mode_index
 
     @property
