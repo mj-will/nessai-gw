@@ -503,10 +503,13 @@ class LISAExtrinsicSymmetry(Reparameterisation):
             x_prime[self.psi_parameter_prime],
             self.polarization_span,
         )
-        if self.n_phase_folds > 1:
-            x_prime[self.phase_mode_parameter] = phase_mode_index
-        if self.n_polarization_folds > 1:
-            x_prime[self.polarization_mode_parameter] = polarization_mode_index
+        if self.include_mode_index:
+            if self.n_phase_folds > 1:
+                x_prime[self.phase_mode_parameter] = phase_mode_index
+            if self.n_polarization_folds > 1:
+                x_prime[self.polarization_mode_parameter] = (
+                    polarization_mode_index
+                )
         return x, x_prime, log_j
 
     def roll(
