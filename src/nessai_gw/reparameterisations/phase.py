@@ -1,9 +1,13 @@
+from typing import Literal
+
 import numpy as np
+from nessai.livepoint import empty_structured_array
 from nessai.reparameterisations import (
     Reparameterisation,
 )
 
 from .. import nessai_logger
+from .utils import determine_parameter_name
 
 logger = nessai_logger.getChild(__name__)
 
@@ -23,10 +27,38 @@ class DeltaPhaseReparameterisation(Reparameterisation):
         Prior bounds for the parameters
     """
 
-    def __init__(self, parameters=None, prior_bounds=None):
-        super().__init__(parameters=parameters, prior_bounds=prior_bounds)
+    def __init__(
+        self,
+        input_parameters=None,
+        prior_bounds=None,
+        rng=None,
+        parameters=None,
+    ):
+        if parameters is not None and input_parameters is not None:
+            if self._format_parameters(parameters) != self._format_parameters(
+                input_parameters
+            ):
+                raise RuntimeError(
+                    "Received conflicting values for `parameters` and "
+                    "`input_parameters`."
+                )
+        if input_parameters is None:
+            input_parameters = parameters
+        input_parameters = self._format_parameters(input_parameters)
+        if len(input_parameters) != 1:
+            raise RuntimeError(
+                "DeltaPhaseReparameterisation only supports one parameter"
+            )
+        super().__init__(
+            input_parameters=input_parameters + ["psi", "theta_jn"],
+            output_parameters=["delta_phase"],
+            inverse_input_parameters=["psi", "theta_jn"],
+            prior_bounds=prior_bounds,
+            rng=rng,
+        )
         self.requires = ["psi", "theta_jn"]
-        self.prime_parameters = ["delta_phase"]
+        # Compatibility alias used in nessai-gw tests and older callers.
+        self.prime_parameters = self.output_parameters
 
     def reparameterise(self, x, x_prime, log_j, **kwargs):
         """
@@ -48,7 +80,7 @@ class DeltaPhaseReparameterisation(Reparameterisation):
         log_j : array_like
             Updated log Jacobian determinant
         """
-        x_prime[self.prime_parameters[0]] = (
+        x_prime[self.output_parameters[0]] = (
             x[self.parameters[0]] + np.sign(np.cos(x["theta_jn"])) * x["psi"]
         )
         return x, x_prime, log_j
@@ -75,8 +107,311 @@ class DeltaPhaseReparameterisation(Reparameterisation):
             Updated log Jacobian determinant
         """
         x[self.parameters[0]] = np.mod(
-            x_prime[self.prime_parameters[0]]
+            x_prime[self.output_parameters[0]]
             - np.sign(np.cos(x["theta_jn"])) * x["psi"],
             2 * np.pi,
         )
         return x, x_prime, log_j
+
+
+class PhasePolarizationFolding(Reparameterisation):
+    """Reparameterisation that folds the phase and polarization parameters.
+
+    Space is folded such that the phase is in [0, pi] or [0, pi/2] and the polarization is in
+    [0, pi/2].
+
+    Parameters
+    ----------
+    parameters : list[str]
+        List of parameter names. Must include a phase and polarization
+        parameter.
+    prior_bounds : dict[str, list]
+        Dictionary of parameter bounds. Must include bounds for the phase and
+        polarization parameters.
+    phase_parameter : str, optional
+        Name of the phase parameter. If None, will be automatically determined
+        from the parameter names.
+    n_phase_modes : int, optional
+        Number of phase modes to fold. Must be 2 or 4. Default is 2, which folds
+        the phase into [0, pi]. If 4, folds the phase into [0, pi/2]. When
+        greater than one, :code:`phasemodeID` is included in X-prime space.
+    polarization_parameter : str, optional
+        Name of the polarization parameter. If None, will be automatically
+        determined from the parameter names.
+        When `n_polarization_folds > 1`, :code:`polarizationmodeID` is
+        included in X-prime space.
+    shift_mean : bool, optional
+        Whether to roll the folded distribution in each dimension such that
+        angular mean is at the centre of the folded space. Default is True.
+    """
+
+    known_phase_parameters: frozenset[str] = frozenset(
+        ["phase", "phi", "phi_ref"]
+    )
+    known_polarization_parameters: frozenset[str] = frozenset(
+        ["psi", "polarization"]
+    )
+
+    one_to_one: bool = True
+    requires_bounded_prior: bool = True
+    phase_mode_parameter: str = "phasemodeID"
+    polarization_mode_parameter: str = "polarizationmodeID"
+
+    _phase_parameter: str = None
+    _polarization_parameter: str = None
+
+    def __init__(
+        self,
+        input_parameters: list[str] = None,
+        parameters: list[str] = None,
+        prior_bounds: dict[str, list] = None,
+        phase_parameter: str = None,
+        n_phase_folds: Literal[1, 2, 4] = 2,
+        n_polarization_folds: Literal[1, 2] = 2,
+        polarization_parameter: str = None,
+        rng: np.random.Generator = None,
+        roll: bool = False,
+    ):
+        if parameters is not None and input_parameters is not None:
+            if self._format_parameters(parameters) != self._format_parameters(
+                input_parameters
+            ):
+                raise RuntimeError(
+                    "Received conflicting values for `parameters` and "
+                    "`input_parameters`."
+                )
+        if input_parameters is None:
+            input_parameters = parameters
+        super().__init__(
+            input_parameters=input_parameters,
+            prior_bounds=prior_bounds,
+            rng=rng,
+        )
+
+        self.phase_parameter = phase_parameter
+        self.polarization_parameter = polarization_parameter
+        self.output_parameters = [f"{p}_folded" for p in self.parameters]
+
+        if n_phase_folds not in (1, 2, 4):
+            raise ValueError(
+                f"n_phase_folds must be 1, 2 or 4. Received {n_phase_folds}"
+            )
+
+        if n_polarization_folds not in (1, 2):
+            raise ValueError(
+                f"n_polarization_folds must be 1 or 2. Received {n_polarization_folds}"
+            )
+
+        self.n_phase_folds = n_phase_folds
+        self.phase_span = 2 * np.pi / self.n_phase_folds
+        self.n_polarization_folds = n_polarization_folds
+        self.polarization_span = np.pi / self.n_polarization_folds
+        self.n_modes = self.n_phase_folds * self.n_polarization_folds
+        self.roll_mean = roll
+        self.phase_shift = 0.0
+        self.polarization_shift = 0.0
+
+        self.phase_mode_weights = (
+            np.ones(self.n_phase_folds) / self.n_phase_folds
+        )
+        self.polarization_mode_weights = (
+            np.ones(self.n_polarization_folds) / self.n_polarization_folds
+        )
+
+        if self.n_phase_folds > 1:
+            self.output_parameters.append(self.phase_mode_parameter)
+        if self.n_polarization_folds > 1:
+            self.output_parameters.append(self.polarization_mode_parameter)
+        # Compatibility alias used in tests and older callers.
+        self.prime_parameters = self.output_parameters
+
+    @property
+    def phase_parameter(self) -> str:
+        return self._phase_parameter
+
+    @phase_parameter.setter
+    def phase_parameter(self, name: str | None):
+        if name is None:
+            name = determine_parameter_name(
+                self.parameters, self.known_phase_parameters, required=True
+            )
+            logger.debug(f"Automatically determined phase parameter: {name}")
+        elif name not in self.parameters:
+            raise ValueError(
+                f"Phase parameter {name} not found in parameters."
+            )
+
+        if not np.isclose(np.ptp(self.prior_bounds[name]), 2 * np.pi):
+            raise ValueError(
+                f"Phase parameter {name} does not span 2 pi. "
+                f"Received bounds: {self.prior_bounds[name]}"
+            )
+        self._phase_parameter = name
+
+    @property
+    def polarization_parameter(self) -> str:
+        return self._polarization_parameter
+
+    @polarization_parameter.setter
+    def polarization_parameter(self, name: str | None):
+        if name is None:
+            name = determine_parameter_name(
+                self.parameters,
+                self.known_polarization_parameters,
+                required=True,
+            )
+            logger.debug(
+                f"Automatically determined polarization parameter: {name}"
+            )
+        elif name not in self.parameters:
+            raise ValueError(
+                f"Polarization parameter {name} not found in parameters."
+            )
+
+        if not np.isclose(np.ptp(self.prior_bounds[name]), np.pi, atol=1e-3):
+            raise ValueError(
+                f"Polarization parameter {name} does not span pi. "
+                f"Received bounds: {self.prior_bounds[name]}"
+            )
+        self._polarization_parameter = name
+
+    @property
+    def phase_parameter_folded(self) -> str:
+        return f"{self.phase_parameter}_folded"
+
+    @property
+    def polarization_parameter_folded(self) -> str:
+        return f"{self.polarization_parameter}_folded"
+
+    def sample_phase_mode_index(self, size: int) -> np.ndarray:
+        return self.rng.choice(
+            self.n_phase_folds, size=size, p=self.phase_mode_weights
+        )
+
+    def sample_polarization_mode_index(self, size: int) -> np.ndarray:
+        return self.rng.choice(
+            self.n_polarization_folds,
+            size=size,
+            p=self.polarization_mode_weights,
+        )
+
+    def calculate_shift(self, x, lower, upper):
+        angles = 2 * np.pi * (x - lower) / (upper - lower)
+        mean_complex = np.mean(np.exp(1j * angles))
+        mean_angle = np.angle(mean_complex)
+        shift = (lower + upper) / 2 - mean_angle * (upper - lower) / (
+            2 * np.pi
+        )
+        return shift
+
+    def update(self, x, x_prime=None):
+        x_prime = empty_structured_array(
+            x.shape[0], names=self.output_parameters
+        )
+        x, x_prime, log_j = self.fold(x, x_prime, np.zeros(x.shape[0]))
+        if self.roll_mean:
+            self.phase_shift = self.calculate_shift(
+                x_prime[self.phase_parameter_folded], 0, self.phase_span
+            )
+            self.polarization_shift = self.calculate_shift(
+                x_prime[self.polarization_parameter_folded],
+                0,
+                self.polarization_span,
+            )
+            logger.debug(f"Calculated phase shift: {self.phase_shift}")
+            logger.debug(
+                f"Calculated polarization shift: {self.polarization_shift}"
+            )
+
+    def fold(
+        self, x: np.ndarray, x_prime: np.ndarray, log_j: np.ndarray
+    ) -> np.ndarray:
+        phase_mode_index = np.floor(
+            np.mod(x[self.phase_parameter], 2 * np.pi) / self.phase_span
+        ).astype(int)
+        polarization_mode_index = np.floor(
+            np.mod(x[self.polarization_parameter], np.pi)
+            / self.polarization_span
+        ).astype(int)
+        x_prime[self.phase_parameter_folded] = np.mod(
+            x[self.phase_parameter], self.phase_span
+        )
+        x_prime[self.polarization_parameter_folded] = np.mod(
+            x[self.polarization_parameter], self.polarization_span
+        )
+        if self.n_phase_folds > 1:
+            x_prime[self.phase_mode_parameter] = phase_mode_index
+        if self.n_polarization_folds > 1:
+            x_prime[self.polarization_mode_parameter] = polarization_mode_index
+        return x, x_prime, log_j
+
+    def roll(
+        self, x: np.ndarray, x_prime: np.ndarray, log_j: np.ndarray
+    ) -> np.ndarray:
+        x_prime[self.phase_parameter_folded] = np.mod(
+            x_prime[self.phase_parameter_folded] + self.phase_shift,
+            self.phase_span,
+        )
+        x_prime[self.polarization_parameter_folded] = np.mod(
+            x_prime[self.polarization_parameter_folded]
+            + self.polarization_shift,
+            self.polarization_span,
+        )
+        return x, x_prime, log_j
+
+    def unfold(
+        self, x: np.ndarray, x_prime: np.ndarray, log_j: np.ndarray
+    ) -> np.ndarray:
+        """Unfold"""
+        if (
+            self.n_phase_folds > 1
+            and self.phase_mode_parameter in x_prime.dtype.names
+        ):
+            phase_mode_index = x_prime[self.phase_mode_parameter].astype(int)
+        else:
+            phase_mode_index = self.sample_phase_mode_index(size=x.shape[0])
+        if (
+            self.n_polarization_folds > 1
+            and self.polarization_mode_parameter in x_prime.dtype.names
+        ):
+            polarization_mode_index = x_prime[
+                self.polarization_mode_parameter
+            ].astype(int)
+        else:
+            polarization_mode_index = self.sample_polarization_mode_index(
+                size=x.shape[0]
+            )
+        x[self.phase_parameter] = (
+            x_prime[self.phase_parameter_folded]
+            + phase_mode_index * self.phase_span
+        )
+        x[self.polarization_parameter] = (
+            x_prime[self.polarization_parameter_folded]
+            + polarization_mode_index * self.polarization_span
+        )
+        return x, x_prime, log_j
+
+    def unroll(
+        self, x: np.ndarray, x_prime: np.ndarray, log_j: np.ndarray
+    ) -> np.ndarray:
+        x_prime[self.phase_parameter_folded] = np.mod(
+            x_prime[self.phase_parameter_folded] - self.phase_shift,
+            self.phase_span,
+        )
+        x_prime[self.polarization_parameter_folded] = np.mod(
+            x_prime[self.polarization_parameter_folded]
+            - self.polarization_shift,
+            self.polarization_span,
+        )
+        return x, x_prime, log_j
+
+    def reparameterise(self, x, x_prime, log_j, **kwargs):
+        x, x_prime, log_j = self.fold(x, x_prime, log_j)
+        if self.roll_mean:
+            x, x_prime, log_j = self.roll(x, x_prime, log_j)
+        return x, x_prime, log_j
+
+    def inverse_reparameterise(self, x, x_prime, log_j, **kwargs):
+        if self.roll_mean:
+            x, x_prime, log_j = self.unroll(x, x_prime, log_j)
+        return self.unfold(x, x_prime, log_j)

@@ -31,16 +31,21 @@ def test_delta_phase_init(delta_phase_reparam):
             prior_bounds=prior_bounds,
         )
     mock.assert_called_once_with(
-        parameters=parameters, prior_bounds=prior_bounds
+        input_parameters=["phase", "psi", "theta_jn"],
+        output_parameters=["delta_phase"],
+        inverse_input_parameters=["psi", "theta_jn"],
+        prior_bounds=prior_bounds,
+        rng=None,
     )
     assert delta_phase_reparam.requires == ["psi", "theta_jn"]
+    assert delta_phase_reparam.output_parameters == ["delta_phase"]
     assert delta_phase_reparam.prime_parameters == ["delta_phase"]
 
 
 def test_delta_phase_reparameterise(delta_phase_reparam):
     """Assert the correct value is returned"""
     delta_phase_reparam.parameters = ["phase"]
-    delta_phase_reparam.prime_parameters = ["delta_phase"]
+    delta_phase_reparam.output_parameters = ["delta_phase"]
 
     x = dict(phase=1.0, theta_jn=0.0, psi=0.5)
     x_prime = dict(delta_phase=np.nan, theta_jn=0.0, psi=0.5)
@@ -61,7 +66,7 @@ def test_delta_phase_reparameterise(delta_phase_reparam):
 def test_delta_phase_inverse_reparameterise(delta_phase_reparam):
     """Assert the correct value is returned"""
     delta_phase_reparam.parameters = ["phase"]
-    delta_phase_reparam.prime_parameters = ["delta_phase"]
+    delta_phase_reparam.output_parameters = ["delta_phase"]
 
     x = dict(phase=np.nan, theta_jn=0.0, psi=0.5)
     x_prime = dict(delta_phase=0.5, theta_jn=0.0, psi=0.5)

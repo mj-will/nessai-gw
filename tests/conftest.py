@@ -1,6 +1,19 @@
 from typing import Callable
 
+import numpy as np
 import pytest
+
+_RNG = np.random.default_rng(1234)
+
+
+@pytest.fixture()
+def rng():
+    return _RNG
+
+
+@pytest.fixture(params=[1, 100])
+def n_samples(request):
+    return request.param
 
 
 @pytest.fixture()
@@ -62,7 +75,12 @@ def get_bilby_priors_and_likelihood():
         )
         for key in fixed_params:
             if key in injection_parameters:
-                priors[key] = injection_parameters[key]
+                priors[key] = bilby.core.prior.DeltaFunction(
+                    name=key,
+                    latex_label=key,
+                    unit=None,
+                    value=injection_parameters[key],
+                )
 
         waveform_generator = bilby.gw.WaveformGenerator(
             duration=4,
@@ -98,6 +116,7 @@ def get_bilby_gw_model(get_bilby_priors_and_likelihood) -> Callable:
         priors, likelihood = get_bilby_priors_and_likelihood(
             parameters, injection_parameters
         )
+        print(priors)
         return BilbyModel(priors=priors, likelihood=likelihood)
 
     return get_model

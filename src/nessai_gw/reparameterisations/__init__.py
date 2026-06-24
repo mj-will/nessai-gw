@@ -8,7 +8,8 @@ from nessai.reparameterisations import (
 )
 
 from .distance import DistanceReparameterisation
-from .phase import DeltaPhaseReparameterisation
+from .lisa import LISAExtrinsicSymmetry
+from .phase import DeltaPhaseReparameterisation, PhasePolarizationFolding
 
 known_reparameterisations = ReparameterisationDict()
 known_reparameterisations.add_reparameterisation(
@@ -58,6 +59,16 @@ known_reparameterisations.add_reparameterisation(
 known_reparameterisations.add_reparameterisation(
     "delta-phase",
     DeltaPhaseReparameterisation,
+    {},
+)
+known_reparameterisations.add_reparameterisation(
+    "lisa-extrinsic",
+    LISAExtrinsicSymmetry,
+    {},
+)
+known_reparameterisations.add_reparameterisation(
+    "phase-polarization-folding",
+    PhasePolarizationFolding,
     {},
 )
 
