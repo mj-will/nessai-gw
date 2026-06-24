@@ -213,7 +213,7 @@ class LISAExtrinsicSymmetry(Reparameterisation):
 
         self.include_mode_index = include_mode_index
 
-        self.prime_parameters = [p + "_folded" for p in self.parameters]
+        self.output_parameters = [p + "_folded" for p in self.parameters]
 
         self.estimate_mode_weights = estimate_mode_weights
         self.minimum_mode_weight = minimum_mode_weight
@@ -226,11 +226,13 @@ class LISAExtrinsicSymmetry(Reparameterisation):
             )
 
         if self.include_mode_index:
-            self.prime_parameters.append(self.skymode_parameter)
+            self.output_parameters.append(self.skymode_parameter)
             if self.n_phase_folds and self.n_phase_folds > 1:
-                self.prime_parameters.append(self.phase_mode_parameter)
+                self.output_parameters.append(self.phase_mode_parameter)
             if self.n_polarization_folds and self.n_polarization_folds > 1:
-                self.prime_parameters.append(self.polarization_mode_parameter)
+                self.output_parameters.append(self.polarization_mode_parameter)
+        # Compatibility alias used in nessai-gw tests and older callers.
+        self.prime_parameters = self.output_parameters
         self.one_to_one = self.include_mode_index
 
     @property
@@ -391,7 +393,7 @@ class LISAExtrinsicSymmetry(Reparameterisation):
             )
         return symmetry_group
 
-    def update(self, x):
+    def update(self, x, x_prime=None):
         """Update the reparameterisation state."""
         if self.estimate_mode_weights:
             mode_ids = self.determine_modes(x)
@@ -406,7 +408,7 @@ class LISAExtrinsicSymmetry(Reparameterisation):
             self.mode_weights = mode_weights / mode_weights.sum()
         if self.roll_mean:
             x_prime = empty_structured_array(
-                x.shape[0], names=self.prime_parameters
+                x.shape[0], names=self.output_parameters
             )
             _, x_prime, _ = self.fold(x, x_prime, np.zeros(x.shape[0]))
             self.lambda_shift = self.calculate_shift(

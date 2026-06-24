@@ -27,10 +27,22 @@ class DeltaPhaseReparameterisation(Reparameterisation):
         Prior bounds for the parameters
     """
 
-    def __init__(self, parameters=None, prior_bounds=None):
-        super().__init__(parameters=parameters, prior_bounds=prior_bounds)
+    def __init__(self, parameters=None, prior_bounds=None, rng=None):
+        parameters = self._format_parameters(parameters)
+        if len(parameters) != 1:
+            raise RuntimeError(
+                "DeltaPhaseReparameterisation only supports one parameter"
+            )
+        super().__init__(
+            input_parameters=parameters + ["psi", "theta_jn"],
+            output_parameters=["delta_phase"],
+            inverse_input_parameters=["psi", "theta_jn"],
+            prior_bounds=prior_bounds,
+            rng=rng,
+        )
         self.requires = ["psi", "theta_jn"]
-        self.prime_parameters = ["delta_phase"]
+        # Compatibility alias used in nessai-gw tests and older callers.
+        self.prime_parameters = self.output_parameters
 
     def reparameterise(self, x, x_prime, log_j, **kwargs):
         """
@@ -52,7 +64,7 @@ class DeltaPhaseReparameterisation(Reparameterisation):
         log_j : array_like
             Updated log Jacobian determinant
         """
-        x_prime[self.prime_parameters[0]] = (
+        x_prime[self.output_parameters[0]] = (
             x[self.parameters[0]] + np.sign(np.cos(x["theta_jn"])) * x["psi"]
         )
         return x, x_prime, log_j
@@ -79,7 +91,7 @@ class DeltaPhaseReparameterisation(Reparameterisation):
             Updated log Jacobian determinant
         """
         x[self.parameters[0]] = np.mod(
-            x_prime[self.prime_parameters[0]]
+            x_prime[self.output_parameters[0]]
             - np.sign(np.cos(x["theta_jn"])) * x["psi"],
             2 * np.pi,
         )
@@ -149,7 +161,7 @@ class PhasePolarizationFolding(Reparameterisation):
 
         self.phase_parameter = phase_parameter
         self.polarization_parameter = polarization_parameter
-        self.prime_parameters = [f"{p}_folded" for p in self.parameters]
+        self.output_parameters = [f"{p}_folded" for p in self.parameters]
 
         if n_phase_folds not in (1, 2, 4):
             raise ValueError(
@@ -178,9 +190,11 @@ class PhasePolarizationFolding(Reparameterisation):
         )
 
         if self.n_phase_folds > 1:
-            self.prime_parameters.append(self.phase_mode_parameter)
+            self.output_parameters.append(self.phase_mode_parameter)
         if self.n_polarization_folds > 1:
-            self.prime_parameters.append(self.polarization_mode_parameter)
+            self.output_parameters.append(self.polarization_mode_parameter)
+        # Compatibility alias used in tests and older callers.
+        self.prime_parameters = self.output_parameters
 
     @property
     def phase_parameter(self) -> str:
@@ -261,9 +275,9 @@ class PhasePolarizationFolding(Reparameterisation):
         )
         return shift
 
-    def update(self, x):
+    def update(self, x, x_prime=None):
         x_prime = empty_structured_array(
-            x.shape[0], names=self.prime_parameters
+            x.shape[0], names=self.output_parameters
         )
         x, x_prime, log_j = self.fold(x, x_prime, np.zeros(x.shape[0]))
         if self.roll_mean:
