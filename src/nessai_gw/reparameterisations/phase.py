@@ -27,14 +27,30 @@ class DeltaPhaseReparameterisation(Reparameterisation):
         Prior bounds for the parameters
     """
 
-    def __init__(self, parameters=None, prior_bounds=None, rng=None):
-        parameters = self._format_parameters(parameters)
-        if len(parameters) != 1:
+    def __init__(
+        self,
+        input_parameters=None,
+        prior_bounds=None,
+        rng=None,
+        parameters=None,
+    ):
+        if parameters is not None and input_parameters is not None:
+            if self._format_parameters(parameters) != self._format_parameters(
+                input_parameters
+            ):
+                raise RuntimeError(
+                    "Received conflicting values for `parameters` and "
+                    "`input_parameters`."
+                )
+        if input_parameters is None:
+            input_parameters = parameters
+        input_parameters = self._format_parameters(input_parameters)
+        if len(input_parameters) != 1:
             raise RuntimeError(
                 "DeltaPhaseReparameterisation only supports one parameter"
             )
         super().__init__(
-            input_parameters=parameters + ["psi", "theta_jn"],
+            input_parameters=input_parameters + ["psi", "theta_jn"],
             output_parameters=["delta_phase"],
             inverse_input_parameters=["psi", "theta_jn"],
             prior_bounds=prior_bounds,
@@ -146,6 +162,7 @@ class PhasePolarizationFolding(Reparameterisation):
 
     def __init__(
         self,
+        input_parameters: list[str] = None,
         parameters: list[str] = None,
         prior_bounds: dict[str, list] = None,
         phase_parameter: str = None,
@@ -155,8 +172,20 @@ class PhasePolarizationFolding(Reparameterisation):
         rng: np.random.Generator = None,
         roll: bool = False,
     ):
+        if parameters is not None and input_parameters is not None:
+            if self._format_parameters(parameters) != self._format_parameters(
+                input_parameters
+            ):
+                raise RuntimeError(
+                    "Received conflicting values for `parameters` and "
+                    "`input_parameters`."
+                )
+        if input_parameters is None:
+            input_parameters = parameters
         super().__init__(
-            parameters=parameters, prior_bounds=prior_bounds, rng=rng
+            input_parameters=input_parameters,
+            prior_bounds=prior_bounds,
+            rng=rng,
         )
 
         self.phase_parameter = phase_parameter

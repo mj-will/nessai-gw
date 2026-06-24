@@ -167,6 +167,7 @@ class LISAExtrinsicSymmetry(Reparameterisation):
 
     def __init__(
         self,
+        input_parameters: list[str] = None,
         parameters: list[str] = None,
         prior_bounds: dict[str, Iterable] = None,
         include_mode_index: bool = False,
@@ -185,8 +186,20 @@ class LISAExtrinsicSymmetry(Reparameterisation):
         roll: bool = False,
         rng: np.random.Generator | None = None,
     ) -> None:
+        if parameters is not None and input_parameters is not None:
+            if self._format_parameters(parameters) != self._format_parameters(
+                input_parameters
+            ):
+                raise RuntimeError(
+                    "Received conflicting values for `parameters` and "
+                    "`input_parameters`."
+                )
+        if input_parameters is None:
+            input_parameters = parameters
         super().__init__(
-            parameters=parameters, prior_bounds=prior_bounds, rng=rng
+            input_parameters=input_parameters,
+            prior_bounds=prior_bounds,
+            rng=rng,
         )
 
         self.lambda_parameter = lambda_parameter
